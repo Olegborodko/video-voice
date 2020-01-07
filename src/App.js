@@ -5,78 +5,76 @@ import ReactPlayer from 'react-player'
 
 const getVideoId = require('get-video-id');
 const Axios = require('axios');
-const Convert = require('xml-js');
+const convert = require('xml-js');
+
+function toSeconds(str){
+	let parts = (str).split(':');
+	let seconds = (+parts[0]) * 60 * 60 + (+parts[1]) * 60 + (+parts[2]); 
+	return Number((seconds).toFixed(0))
+}
 
 
 class App extends Component {
 	state = {
 		videoId: null,
 		objectText: null,
-		videoLink: null
+		videoLink: null,
+		content: {},
+		playing: false
+	}
+
+	componentDidMount(){
+
 	}
 
 	onSelectClick = () => {
-		let videoId = this.state.videoId
-		console.log('videoId',videoId)
+		const videoId = this.state.videoId
+		const videoLink = this.state.videoLink
+		//console.log('videoId',videoId)
 
-		
+		Axios.post(`${process.env.REACT_APP_HOST_PORT}/api/get-subtitles`, {
+			videoId,
+			videoLink
+		},
+		{
+			headers: {
+          "Content-Type": "application/json"
+      },
+      params: {}
+		})
+		.then((res) => {
+			if (res && res.data){
+				//console.log(res)
+				const context = convert.xml2js(res['data'], {})
+				
+				const arr = context.elements[0].elements[1].elements[0].elements
+
+				let objVolume = {}
+				arr.forEach((el) => {
+					const secondsB = toSeconds(el.attributes.begin)
+					const secondsE = toSeconds(el.attributes.end)
+
+					if (!objVolume[secondsB]) {
+						objVolume[secondsB] = {}
+					}
+					objVolume[secondsB].end = secondsE
+					objVolume[secondsB].text = el.elements[0].text
+				})
+
+				console.log(JSON.stringify(objVolume, null, 2))
 
 
-		// Axios.get(`http://video.google.com/timedtext?type=list&v=${videoId}`, {},
-		// {
-		// 	headers: {
-  //         "Content-Type": "application/json"
-  //     },
-  //     params: {}
-		// })
-		// .then((res) => {
-		// 	if (res && res.data){
-		// 		console.log(JSON.stringify(Convert.xml2js(res['data'], {})))
-		// 	}
-		// })
-		// .catch(err => {
-  //     console.log(err);
-  //   });
-
-		// Axios.get(`http://video.google.com/timedtext?lang=ru&v=${videoId}` , {},
-  // 	{
-  //     headers: {
-  //         "Content-Type": "application/json"
-  //     },
-  //     params: {}
-  //   })
-  //   .then((res) => {
-  //   	console.log(res)
-  //   	if (res['data']){
-  //   		const objectWithText = Convert.xml2js(res['data'], {});
-
-  //   		if (objectWithText.hasOwnProperty('elements')){
-  //   			const arrayText = objectWithText['elements'][0]['elements']
-  //   			let newObj = {}
-  //   			arrayText.forEach((obj) => {
-  //   				if (!newObj[obj['attributes']['start']]){
-  //   					newObj[obj['attributes']['start']] = {}	
-  //   				}
-  //   				newObj[obj['attributes']['start']] = {
-  //   					dur: obj['attributes']['dur'],
-  //   					text: obj['elements'][0]['text']
-  //   				}
-  //   			})
-
-  //   			this.setState({
-  //   				objectText: newObj
-  //   			})
-    			
-  //   			console.log('newObj', newObj);
-  //   		}
-
-  //   	} else {
-  //   		console.log(res);
-  //   	}
-  //   })
-  //   .catch(err => {
-  //     console.log(err);
-  //   });
+				this.setState({
+					content: objVolume,
+					playing: true
+				})
+			} else {
+				console.log('error response');
+			}
+		})
+		.catch(err => {
+      console.log('err', err);
+    });
 	}
 
 	inputChange = (data) => {
@@ -89,8 +87,13 @@ class App extends Component {
 			}
 	}
 
+	onProgress = (data) => {
+		//console.log('data', data.playedSeconds);
+		
+	}
+
 	render() {
-		const {videoLink} = this.state
+		const {videoLink, playing} = this.state
 
 	  return (
 	    <div className="App" style={{textAlign: 'left', padding: '5px'}}>
@@ -107,7 +110,13 @@ class App extends Component {
 	      	SELECT
 	      </button>
 
-	      <ReactPlayer url={videoLink} playing />
+	      <ReactPlayer 
+	      	url={videoLink} 
+	      	playing={playing}
+	      	progressInterval={100}
+	      	onProgress={this.onProgress}
+	      	controls={true}
+	      />
 	    </div>
 	  );
 	}
