@@ -1,22 +1,6 @@
 const Router = require('koa-router');
 const router = new Router();
-const youtubedl = require('youtube-dl')
-const url = 'https://youtu.be/PizwcirYuGY'
-
-const options = {
-  // Write automatic subtitle file (youtube only)
-  auto: true,
-  // Downloads all the available subtitles.
-  all: false,
-  // Subtitle format. YouTube generated subtitles
-  // are available ttml or vtt.
-  format: 'ttml',
-  // Languages of subtitles to download, separated by commas.
-  lang: 'ru',
-  // The directory to save the downloaded files in.
-  cwd: __dirname + '/subtitles/',
-  //outtmpl: __dirname + '/subtitles/' + 'test.ttml'
-}
+const { spawn, exec } = require('child_process');
 
 router.post('/api/get-subtitles', async (ctx, next) => {
 	try {
@@ -29,12 +13,20 @@ router.post('/api/get-subtitles', async (ctx, next) => {
 		// await knex('monitors')
 		// 	.where('id', id)
 		// 	.update(data)
+		//const res = spawn('youtube-dl', ['--write-auto-sub', '--skip-download', `--sub-format 'ttml'`, `--sub-lang 'ru'`, 'https://www.youtube.com/watch?v=8irSFvoyLHQ'])
 
-		youtubedl.getSubs(url, options, function(err, files) {
-		  if (err) throw err
-
-		  console.log('subtitle files downloaded:', files)
+		const res = exec(`youtube-dl --write-auto-sub --skip-download --sub-format 'ttml' --sub-lang 'ru' https://www.youtube.com/watch?v=8irSFvoyLHQ`, {cwd: __dirname + '/subtitles/'}, (error, stdout, stderr) => {
+			if (error) {
+				console.log(error.stack);
+			}
+			console.log('Child Process STDOUT: '+stdout);
+  		console.log('Child Process STDERR: '+stderr);
 		})
+
+		res.on('exit', function (code) {
+  		console.log('Child process exited with exit code '+code);
+		});
+		
 		
 		ctx.response.status = 200;
 		ctx.body = true;

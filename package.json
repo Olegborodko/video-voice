@@ -23,8 +23,7 @@
     "react-player": "^1.14.2",
     "react-scripts": "3.3.0",
     "un": "0.0.0",
-    "xml-js": "^1.6.11",
-    "youtube-dl": "^2.3.0"
+    "xml-js": "^1.6.11"
   },
   "scripts": {
     "start": "react-scripts start",
